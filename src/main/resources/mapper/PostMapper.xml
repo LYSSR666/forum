@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ly.forum.mapper.PostMapper">
+    <resultMap id="postMap" type="Post">
+        <id property="postid" column="postid"/>
+        <result property="postname" column="postname"/>
+        <result property="copywriting" column="copywriting"/>
+        <result property="imagelinks" column="imagelinks"/>
+        <result property="forwardContent" column="forward_content"/>
+        <result property="forwardNum" column="forward_num"/>
+        <result property="supportNum" column="support_num"/>
+        <result property="commentNum" column="comment_num"/>
+        <result property="readNum" column="read_num"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="isForward" column="is_forward"/>
+        <association property="user" column="userid" javaType="User">
+            <id property="userid" column="userid"/>
+            <result property="userAvatar" column="user_avatar"/>
+            <result property="username" column="username"/>
+            <result property="password" column="password"/>
+            <result property="motto" column="motto"/>
+            <result property="school" column="school"/>
+            <result property="specialty" column="specialty"/>
+            <result property="createTime" column="create_time"/>
+            <result property="area" column="area"/>
+            <result property="fansNum" column="fans_num"/>
+            <result property="focusNum" column="focus_num"/>
+            <result property="postNum" column="postNum"/>
+            <result property="totalReadNum" column="total_read_num"/>
+            <result property="interactionNum" column="interaction_num"/>
+            <result property="iscollege" column="iscollege"/>
+        </association>
+        <association property="category" column="categoryid" javaType="Category">
+            <id property="categoryid" column="categoryid"/>
+            <result property="categoryname" column="categoryname"/>
+        </association>
+    </resultMap>
+
+    <!-- 分页查询所有的帖子信息 -->
+    <select id="findAllPost" resultMap="postMap">
+        select *
+        from post p, user u, category c
+        where p.userid=u.userid and p.categoryid=c.categoryid
+        ORDER BY publish_time DESC limit #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 分页按时间顺序查询所有的帖子信息 -->
+    <!--<select id="findPostByPublishTime" resultMap="postMap">
+        select * from post p, user u, category c where p.userid=u.userid and p.categoryid=c.categoryid order by publish_time desc limit #{pageCode}, #{pageSize}
+    </select>-->
+    <select id="findPostByPublishTime" resultMap="postMap">
+        SELECT * FROM post p, user u WHERE p.userid=u.userid and DATE_SUB(CURDATE(), INTERVAL 7 DAY) &lt;= DATE(p.publish_time)
+    </select>
+
+    <!-- 查询所有帖子的总记录数 -->
+    <select id="findPostTotalRecord" resultType="java.lang.Integer">
+        select count(*) from post
+    </select>
+
+    <select id="findRecentPostRecord" resultType="java.lang.Integer">
+        SELECT count(*) FROM post p, user u WHERE p.userid=u.userid and DATE_SUB(CURDATE(), INTERVAL 7 DAY) &lt;= DATE(p.publish_time)
+    </select>
+
+    <!-- 分页查询当前登录用户所关注的用户发布的帖子 -->
+    <select id="findCurUserFocusedPost" resultMap="postMap">
+        SELECT * FROM user_focus uf, post p, user u WHERE uf.cur_user_id=#{userid} AND u.userid=p.userid AND con_user_id=p.userid ORDER BY publish_time DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询当前登录用户所关注的用户发布的帖子的总记录数 -->
+    <select id="findFocusedPostTotalRecord" resultType="java.lang.Integer">
+        SELECT count(*) FROM user_focus uf, post p WHERE uf.cur_user_id=#{userid} AND con_user_id=p.userid
+    </select>
+
+    <!-- 根据分类类别来分页查询帖子信息 -->
+    <select id="findPostByCategory" parameterType="category" resultMap="postMap">
+        SELECT * FROM post p, category c, user u WHERE p.categoryid=c.categoryid AND u.userid=p.userid AND c.categoryid=#{category.categoryid} ORDER BY publish_time DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 分页查询所有高校发布的帖子 -->
+    <select id="findPostByCollegeUser" resultMap="postMap">
+        SELECT * FROM post p, USER u WHERE p.userid=u.userid AND u.iscollege=1 ORDER BY publish_time DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询高校发布的帖子总数 -->
+    <select id="findCollegePostTotalRecords" resultType="java.lang.Integer">
+        select count(*) from post p, user u where p.userid=u.userid and u.iscollege=1
+    </select>
+    
+    <!-- 分页查询话题列表 -->
+    <select id="findTopicList" resultMap="postMap">
+        SELECT * FROM post p, USER u WHERE p.userid=u.userid ORDER BY comment_num DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询热搜榜列表 -->
+    <select id="hotSearchList" resultMap="postMap">
+        SELECT * FROM post p, USER u WHERE p.userid=u.userid ORDER BY read_num DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询当前登录用户的所有帖子信息 -->
+    <select id="findAllPersonalPost" resultMap="postMap">
+        SELECT * FROM post p, USER u WHERE p.userid=u.userid AND u.userid=#{userid} ORDER BY publish_time DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询当前用户收藏的帖子 -->
+    <select id="findUserCollectedPost" resultMap="postMap">
+        SELECT * FROM post p, user_collection uc, user u WHERE p.postid=uc.postid AND u.userid=p.userid AND uc.userid=#{userid} ORDER BY publish_time DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 收藏帖子 -->
+    <insert id="collectPost">
+        insert into user_collection (userid, postid) values (#{currentUserId}, #{postId})
+    </insert>
+
+    <!-- 取消收藏帖子 -->
+    <delete id="deleteCollectPost">
+        delete from user_collection where userid=#{currentUserId} and postid=#{postId}
+    </delete>
+
+    <!-- 查询当前用户收藏的帖子的总数 -->
+    <select id="findUserCollectPostRecord" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM user_collection uc WHERE uc.userid=#{userid}
+    </select>
+
+    <!-- 查询包含该关键字的帖子总数 -->
+    <select id="findPostByKeywordRecord" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM post p WHERE p.postname LIKE #{keyword}
+    </select>
+
+    <!-- 根据关键字进行模糊查询 -->
+    <select id="findPostByKeyword" resultMap="postMap">
+        SELECT * FROM post p, USER u WHERE p.userid=u.userid AND p.copywriting LIKE #{keyword} ORDER BY publish_time DESC LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 保存新发布帖子信息 -->
+    <insert id="savePost">
+        insert into post (postname, copywriting, imagelinks, publish_time, userid, categoryid) values (#{post.postname}, #{post.copywriting}, #{post.imagelinks}, #{post.publishTime}, #{post.user.userid}, #{post.category.categoryid})
+    </insert>
+
+    <!-- 修改帖子评论数 -->
+    <update id="updateCommentNum">
+        update post set comment_num=#{postCommentNum} where postid=#{postId}
+    </update>
+
+    <!-- 查询帖子的评论数 -->
+    <select id="findCommentNumByPostId" resultType="java.lang.Integer">
+        select comment_num from post where postid=#{postId}
+    </select>
+
+    <!-- 增加帖子的点赞数量 -->
+    <update id="addPostSupportNum">
+        update post set support_num=#{postSupportNum} where postid=#{postId}
+    </update>
+
+    <!-- 取消帖子的点赞 -->
+    <update id="subPostSupportNum">
+        update post set support_num=#{postSupportNum} where postid=#{postId}
+    </update>
+
+    <!-- 插入帖子点赞记录 -->
+    <insert id="recordSupportPost">
+        insert into user_support (cur_user_id, post_id) values (#{userId}, #{postId})
+    </insert>
+
+    <!-- 删除帖子点赞记录 -->
+    <delete id="delSupportPost">
+        delete from user_support where cur_user_id=#{userId} and post_id=#{postId}
+    </delete>
+
+    <!-- 查询帖子的点赞数量 -->
+    <select id="findPostSupportNum" resultType="java.lang.Integer">
+        select support_num from post where postid=#{postId}
+    </select>
+
+    <!-- 增加帖子转发数量 -->
+    <update id="addPostForwardNum">
+        update post set forward_num=#{forwardNum} where postid=#{postId}
+    </update>
+
+    <!-- 添加转发记录 -->
+    <insert id="addForwardRecord">
+        insert into user_forward (userid, postid) values (#{userId}, #{postId})
+    </insert>
+
+    <!-- 查询阅读量最多的10篇帖子 -->
+    <select id="findPostByReadNum" resultMap="postMap">
+        SELECT * FROM post ORDER BY read_num DESC LIMIT 0, 10
+    </select>
+
+    <!-- 保存转发的帖子 -->
+    <insert id="saveForwardPost">
+        insert into post (postname, copywriting, forward_content, imagelinks, publish_time, userid, categoryid, is_forward) values (#{post.postname}, #{post.copywriting}, #{post.forwardContent}, #{post.imagelinks}, #{post.publishTime}, #{post.user.userid}, #{post.category.categoryid}, #{post.isForward})
+    </insert>
+
+    <!-- 根据postId来查找转发数量 -->
+    <select id="findForwardNumByPostId" resultType="java.lang.Integer">
+        select forward_num from post where postid=#{postId}
+    </select>
+</mapper>

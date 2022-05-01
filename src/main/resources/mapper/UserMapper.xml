@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ly.forum.mapper.UserMapper">
+
+    <!-- 用户注册 -->
+    <insert id="register">
+        insert into user (user_avatar, username, password, motto, school, specialty, create_time, area, iscollege) values (#{user.userAvatar}, #{user.username}, #{user.password}, #{user.motto}, #{user.school}, #{user.specialty}, #{user.createTime}, #{user.area}, #{user.iscollege})
+    </insert>
+
+    <!--  查询我所关注的用户总记录数  -->
+    <select id="findAllFocusedUserRecords" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM USER u, user_focus uf WHERE u.userid=uf.cur_user_id AND uf.cur_user_id=#{userid}
+    </select>
+
+    <!-- 查询我关注的所有用户信息 -->
+    <select id="findAllFocusedUser" resultType="User">
+        SELECT u.*
+        FROM USER u, user_focus uf
+        WHERE u.userid=uf.con_user_id AND uf.cur_user_id=#{userid} LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询我的粉丝总记录数 -->
+    <select id="findAllFansRecord" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM USER u, user_focus uf WHERE u.userid=uf.cur_user_id AND uf.con_user_id=#{userid}
+    </select>
+
+    <!-- 查询当前用户的所有粉丝 -->
+    <select id="findAllFans" resultType="User">
+        SELECT * FROM USER u, user_focus uf WHERE u.userid=uf.cur_user_id AND uf.con_user_id=#{userid} LIMIT #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 判断当前登录用户是否关注了某一个特定的用户 -->
+    <select id="isFocused" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM user_focus WHERE cur_user_id=#{currentUserId} AND con_user_id=#{focusedUserId}
+    </select>
+
+    <!-- 判断当前登录用户是否点赞了某一篇帖子 -->
+    <select id="isSupported" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM user_support WHERE cur_user_id=#{currentUserId} AND post_id=#{postId}
+    </select>
+
+    <!-- 关注博主 -->
+    <insert id="focusUser">
+        insert into user_focus (cur_user_id, con_user_id) values (#{currentUserId}, #{focusedUserId})
+    </insert>
+
+    <!-- 取消关注 -->
+    <delete id="cancelFocus">
+        delete from user_focus where cur_user_id=#{currentUserId} AND con_user_id=#{focusedUserId}
+    </delete>
+
+    <!-- 查询当前用户尚未关注的用户的信息 -->
+    <select id="recommendUser" resultType="User">
+        SELECT * FROM `user` u WHERE u.userid NOT IN (SELECT con_user_id FROM user_focus uf WHERE uf.cur_user_id=#{currentUserId}) ORDER BY userid ASC limit #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询当前用户尚未关注的用户总数 -->
+    <select id="unfocuseUserNum" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM `user` u WHERE u.userid NOT IN (SELECT con_user_id FROM user_focus uf WHERE uf.cur_user_id=#{currentUserId})
+    </select>
+
+    <!-- 删除粉丝 -->
+    <delete id="deleteFans">
+        delete from user_focus where con_user_id=#{currentUserId} and cur_user_id=#{fansUserId}
+    </delete>
+
+    <!-- 判断当前用户是否收藏了某一个帖子 -->
+    <select id="isCollected" resultType="java.lang.Integer">
+        select count(*) from user_collection where userid=#{currentUserId} and postid=#{postId}
+    </select>
+
+    <!-- 查询所有的用户信息 -->
+    <select id="findAllUsers" resultType="User">
+        select * from user limit #{pageCode}, #{pageSize}
+    </select>
+
+    <!-- 查询所有用户的总数量 -->
+    <select id="findAllUserRecord" resultType="java.lang.Integer">
+        select count(*) from user
+    </select>
+</mapper>

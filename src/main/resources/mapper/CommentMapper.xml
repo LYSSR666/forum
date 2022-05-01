@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ly.forum.mapper.CommentMapper">
+    <resultMap id="ParentCommentMap" type="Pcomment">
+        <id column="pcid" property="pcid"/>
+        <result column="parent_content" property="parentContent"/>
+        <result column="publish_time" property="publishTime"/>
+        <result column="support_num" property="supportNum"/>
+        <association property="user" column="userid" javaType="User">
+            <id property="userid" column="userid"/>
+            <result property="userAvatar" column="user_avatar"/>
+            <result property="username" column="username"/>
+        </association>
+        <association property="post" column="postid" javaType="Post">
+            <id property="postid" column="postid"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="ChildCommentMap" type="Ccomment">
+        <id property="ccid" column="ccid"/>
+        <result property="childContent" column="child_content"/>
+        <result property="publishTime" column="publish_time"/>
+        <result property="supportNum" column="support_num"/>
+        <association property="user" column="userid" javaType="User">
+            <id property="userid" column="userid"/>
+            <result property="userAvatar" column="user_avatar"/>
+            <result property="username" column="username"/>
+        </association>
+    </resultMap>
+
+    <!-- 查询所有的父级评论 -->
+    <select id="findParentCommentByPostId" resultMap="ParentCommentMap">
+        SELECT * FROM pcomment pc, post p, USER u WHERE pc.userid=u.userid AND pc.postid=p.postid AND p.postid=#{postId}
+    </select>
+
+    <!-- 查询属于该父级评论的所有子级评论 -->
+    <select id="findChildComment" resultMap="ChildCommentMap">
+        SELECT * FROM ccomment cc, USER u WHERE cc.userid=u.userid AND cc.postid=#{postId} AND cc.pcid=#{pcid}
+    </select>
+
+    <!-- 插入父级评论信息 -->
+    <insert id="saveParentComment">
+        INSERT INTO pcomment (parent_content, publish_time, support_num, userid, postid) VALUES(#{parentComment.parentContent}, #{parentComment.publishTime}, #{parentComment.supportNum}, #{parentComment.user.userid}, #{parentComment.post.postid});
+    </insert>
+
+    <!-- 插入子级评论信息 -->
+    <insert id="saveChildComment">
+        INSERT INTO ccomment (child_content, publish_time, support_num, pcid, userid, postid) VALUES(#{childComment.childContent}, #{childComment.publishTime}, #{childComment.supportNum},#{childComment.parentComment.pcid} ,#{childComment.user.userid}, #{childComment.post.postid});
+    </insert>
+
+    <!-- 修改父级评论的评论数量 -->
+    <update id="updateParentCommentNum">
+        update pcomment set comment_num=#{parentCommentNum} where pcid=#{pcid}
+    </update>
+
+    <!-- 根据pcid来查询父级评论的子级评论信息 -->
+    <select id="findChildCommentByPcid" resultMap="ChildCommentMap">
+        SELECT * FROM ccomment c, user u WHERE c.userid=u.userid and pcid=#{pcid}
+    </select>
+
+    <!-- 查询该父级评论的子级评论数量 -->
+    <select id="findCommentNumByPcid" resultType="java.lang.Integer">
+        SELECT comment_num FROM pcomment WHERE pcid=#{pcid}
+    </select>
+
+    <!-- 增加父级评论的点赞数量 -->
+    <update id="addParentCommentSupportNum">
+        update pcomment set support_num=#{parentCommentSupportNum} where pcid=#{commentId}
+    </update>
+
+    <!-- 减少父级评论的点赞数量 -->
+    <update id="subParentCommentSupportNum">
+        update pcomment set support_num=#{parentCommentSupportNum} where pcid=#{commentId}
+    </update>
+
+    <!-- 根据pcid查询父级评论的点赞数量 -->
+    <select id="findParentCommentSupportNum" resultType="java.lang.Integer">
+        select support_num from pcomment where pcid=#{commentId}
+    </select>
+
+    <!-- 增加子级评论的点赞数量 -->
+    <update id="addChildCommentSupportNum">
+        update ccomment set support_num=#{childCommentSupportNum} where ccid=#{ccid}
+    </update>
+
+    <!-- 根据ccid查询子级评论的点赞数量 -->
+    <select id="findChildCommentSupportNum" resultType="java.lang.Integer">
+        select support_num from ccomment where ccid=#{ccid}
+    </select>
+
+    <!-- 查询当前用户是否点赞了某一条父级评论 -->
+    <select id="isSupportParentComment" resultType="java.lang.Integer">
+        select count(*) from comment_support where userid=#{userId} and postid=#{postId} and commentid=#{commentId}
+    </select>
+
+    <!-- 插入点赞父级评论记录 -->
+    <insert id="saveSupportCommentRecord">
+        insert into comment_support (userid, postid, commentid) values (#{userId}, #{postId}, #{commentId})
+    </insert>
+
+    <!-- 删除点赞父级评论记录 -->
+    <delete id="delSupportCommentRecord">
+        delete from comment_support where userid=#{userId} and postid=#{postId} and commentid=#{commentId}
+    </delete>
+</mapper>
